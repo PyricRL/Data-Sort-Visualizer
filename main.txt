@@ -1,0 +1,177 @@
+import pygame
+import sys
+import random
+import asyncio
+import time
+
+pygame.init()
+
+WIDTH, HEIGHT = 1280, 700
+
+SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+
+elapsedTime = 0
+elapsedTimeMS = 0
+
+comparisions = 0
+swaps = 0
+delay = 1
+
+font = pygame.font.SysFont("Times New Roman", 20)
+
+def displayStatistics():
+    text1 = font.render(f"Swaps: {swaps}", True, (0, 0, 0))
+    text2 = font.render(f"Comparisions: {comparisions}", True, (0, 0, 0))
+    text3 = font.render(f"Elapsed time: {elapsedTime: .4f}", True, (0, 0, 0))
+    text4 = font.render(f"Real time: {elapsedTimeMS}", True, (0, 0, 0))
+
+    textRect1 = text1.get_rect()
+    textRect2 = text2.get_rect()
+    textRect3 = text3.get_rect()
+    textRect4 = text4.get_rect()
+
+    textRect1.left = 10
+    textRect2.left = 10
+    textRect3.left = 10
+    textRect4.left = 10
+
+    textRect1.top = 0
+    textRect2.top = 20
+    textRect3.top = 40
+    textRect4.top = 60
+
+    SCREEN.blit(text1, textRect1)
+    SCREEN.blit(text2, textRect2)
+    SCREEN.blit(text3, textRect3)
+    SCREEN.blit(text4, textRect4)
+
+def createData(amount, maxValue):
+    factor = maxValue / amount
+    data = [int(i * factor) for i in range(1, amount + 1)]
+    random.shuffle(data)
+    return data
+
+async def bubbleSort(data):
+    global comparisions, swaps
+    for x in range(len(data)):
+        for y in range(len(data) - x - 1):
+            comparisions += 1
+            if data[y] > data[y + 1]:
+                await asyncio.sleep(delay/1000)
+                t = data[y]
+                data[y] = data[y + 1]
+                data[y + 1] = t
+                swaps += 1
+
+
+async def mergeSort(data, left, right):
+    if left < right:
+        mid = (left + right) // 2
+
+        await mergeSort(data, left, mid)
+        await mergeSort(data, mid + 1, right)
+        await merge(data, left, mid, right)
+
+async def merge(data, left, mid, right):
+    global comparisions, swaps
+
+    n1 = mid - left + 1
+    n2 = right - mid
+
+    L = [0] * n1
+    R = [0] * n2
+
+    for i in range(n1):
+        L[i] = data[left + i]
+
+    for j in range(n2):
+        R[j] = data[mid + 1 + j]
+
+    i = 0 
+    j = 0
+    k = left 
+
+    while i < n1 and j < n2:
+        comparisions += 1
+        if L[i] <= R[j]:
+            data[k] = L[i]
+            i += 1
+            await asyncio.sleep(delay / 1000)
+        else:
+            data[k] = R[j]
+            j += 1
+            await asyncio.sleep(delay / 1000)
+        k += 1
+
+    while i < n1:
+        data[k] = L[i]
+        i += 1
+        k += 1
+        swaps += 1
+        await asyncio.sleep(delay / 1000)
+
+    while j < n2:
+        data[k] = R[j]
+        j += 1
+        k += 1
+        swaps += 1
+        await asyncio.sleep(delay / 1000)
+    
+def displayData(list):
+    SCREEN.fill("white")
+
+    gap = WIDTH / len(list)
+
+    scaleFactor = (HEIGHT) / max(list)
+
+    for x in range(len(list)):
+        height = (list[x] * scaleFactor) - 50
+        rect = pygame.Rect(gap * x, HEIGHT - height, gap-1, height)
+        pygame.draw.rect(SCREEN, "gray", rect)
+
+data = createData(100, 100)
+
+async def main():
+    global elapsedTime, elapsedTimeMS
+
+    startTime = time.time()
+
+    #bubbleSortTask = asyncio.create_task(bubbleSort(data))
+    mergeSortTask = asyncio.create_task(mergeSort(data, 0, len(data) - 1))
+
+    while not mergeSortTask.done():
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+        
+        SCREEN.fill("white")
+
+        displayData(data)
+
+        displayStatistics()
+
+        pygame.display.flip()
+
+        await asyncio.sleep(0)
+    
+    endTime = time.time()
+    elapsedTime = endTime - startTime
+    elapsedTimeMS = (endTime - startTime) * 1000
+
+    await mergeSortTask
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        SCREEN.fill("white")
+        displayData(data)
+        displayStatistics()
+
+        pygame.display.flip()
+        await asyncio.sleep(0)
+
+asyncio.run(main())
