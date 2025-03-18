@@ -5,7 +5,7 @@ pygame.init()
 
 WIDTH, HEIGHT = 1280, 720
 SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
-FPS = 900
+FPS = 1000
 
 swaps = 0
 comparisons = 0
@@ -18,7 +18,7 @@ def createData(amount, maxValue):
     random.shuffle(data)
     return data
 
-def drawData(data, heightOffset, highlight = []):
+def drawData(data, heightOffset, swapIndex=None, compareIndex=None):
     SCREEN.fill("black")
 
     gap = WIDTH // len(data)
@@ -26,14 +26,20 @@ def drawData(data, heightOffset, highlight = []):
     scaleFactor = (HEIGHT - heightOffset) / max(data)
 
     for x in range(len(data)):
-        color = "green" if x in highlight else "white"
+        if x == swapIndex:
+            color = "green"
+        elif x == compareIndex:
+            color = "red"
+        else:
+            color = "white"
         height = data[x] * scaleFactor
-        rect = pygame.Rect(gap * x, HEIGHT - height, gap - 1, height)
+        rect = pygame.Rect(gap * x, HEIGHT - height, gap, height)
         pygame.draw.rect(SCREEN, color, rect)
 
 def displayStats(sort_time, visual_time, swaps, comparisons):
     font = pygame.font.SysFont('Times New Roman', 20)
     stats_text = font.render(f"Visual Time: {visual_time:.2f}s | Sort Time: {sort_time:.10f}s | Swaps: {swaps} | Comparisons: {comparisons}", True, (255, 255, 255))
+    SCREEN.fill("black", (10, 10, 1000, 30))
     SCREEN.blit(stats_text, (10, 10))
 
 def bubbleSort(data, visualize=True):
@@ -41,16 +47,19 @@ def bubbleSort(data, visualize=True):
     for x in range(len(data)):
         for y in range(len(data) - x - 1):
             comparisons += 1
+            swapIndex = None
+            compareIndex = y
             if data[y] > data[y + 1]:
                 t = data[y]
                 data[y] = data[y + 1]
                 data[y + 1] = t
                 swaps += 1
+                swapIndex = y + 1
                 if visualize:
-                    yield data, [y, y + 1]
+                    yield data, swapIndex, compareIndex
+    yield data, None, None
 
 def main():
-    highlightedIndices = []
     running = True
     sortGenerator = None
     startTime = 0
@@ -58,6 +67,8 @@ def main():
     sortTime = 0
 
     data = createData(128, 1000)
+
+    drawData(data, 20)
 
     while running:
         for event in pygame.event.get():
@@ -74,12 +85,12 @@ def main():
     
         if sortGenerator:
             try:
-                data, highlightedIndices = next(sortGenerator)
+                data, swapIndex, compareIndex = next(sortGenerator)
+                drawData(data, 20, swapIndex, compareIndex)
                 visualTime = time.time() - startTime
             except StopIteration:
                 sortGenerator = None
-
-        drawData(data, 50, highlightedIndices)
+        
         displayStats(sortTime, visualTime, swaps, comparisons)
 
         pygame.display.flip()
